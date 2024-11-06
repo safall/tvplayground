@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,8 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -82,9 +86,10 @@ private fun Drawer(
 ) {
     // keep reference to focus state for each items
     val itemFocusState = List(size = items.size) { mutableStateOf(false) }
-    val itemsFocusRequester = List(size = items.size) { FocusRequester() }
+    val itemsFocusRequester = remember { List(size = items.size) { FocusRequester() } }
     var selectedIndex by remember { mutableIntStateOf(0) }
     val navController = rememberNavController()
+
     NavigationDrawer(
         drawerContent = {
             Column(
@@ -111,7 +116,7 @@ private fun Drawer(
                                     itemFocusState[index].value = false
                                 }
                             }
-                            .focusRequester(itemsFocusRequester[selectedIndex])
+                            .focusRequester(itemsFocusRequester[index])
                             .focusable(),
                         selected = selectedIndex == index,
                         onClick = {},
@@ -132,10 +137,37 @@ private fun Drawer(
             navController = navController,
             startDestination = NavMenuItem.TIDAL.name,
             builder = {
-                composable(NavMenuItem.TIDAL.name) { ContentPage(tidalItems) }
-                composable(NavMenuItem.SPOTIFY.name) { ContentPage(spotifyItems) }
-                composable(NavMenuItem.DEEZER.name) { ContentPage(deezerItems) }
+                composable(NavMenuItem.TIDAL.name) {
+                    ContentPage(
+                        tidalItems,
+                        Modifier.focusOnLeftExit(itemsFocusRequester[0])
+                    )
+                }
+                composable(NavMenuItem.SPOTIFY.name) {
+                    ContentPage(
+                        spotifyItems,
+                        Modifier.focusOnLeftExit(itemsFocusRequester[1])
+                    )
+                }
+                composable(NavMenuItem.DEEZER.name) {
+                    ContentPage(
+                        deezerItems,
+                        Modifier.focusOnLeftExit(itemsFocusRequester[2])
+                    )
+                }
             }
         )
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+fun Modifier.focusOnLeftExit(focusRequester: FocusRequester): Modifier {
+    return focusProperties {
+        exit = { focusDirection ->
+            when (focusDirection) {
+                FocusDirection.Left -> focusRequester
+                else -> FocusRequester.Default
+            }
+        }
     }
 }
